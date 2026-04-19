@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Demo T-SQL vs No T-SQL</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+      body {
+        font-family: sans-serif;
+        background: #1a202c;
+        color: white;
+        text-align: center;
+        padding: 50px;
+      }
+      .card {
+        background: #2d3748;
+        padding: 30px;
+        border-radius: 15px;
+        display: inline-block;
+        min-width: 300px;
+        box-shadow: 0 10px 15px rgba(0, 0, 0, 0.3);
+      }
+      .status {
+        font-size: 3rem;
+        font-weight: bold;
+        margin: 20px 0;
+        color: #4fd1c5;
+      }
+      .status.error {
+        color: #f56565;
+      }
+      button {
+        padding: 15px 25px;
+        margin: 10px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: bold;
+        transition: 0.3s;
+      }
+      .btn-bad {
+        background: #e53e3e;
+        color: white;
+      }
+      .btn-good {
+        background: #38a169;
+        color: white;
+      }
+      .btn-reset {
+        background: #4a5568;
+        color: white;
+        margin-top: 20px;
+      }
+      button:hover {
+        opacity: 0.8;
+        transform: scale(1.05);
+      }
+      #message {
+        margin-top: 20px;
+        font-style: italic;
+        color: #cbd5e0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Hệ Thống Đăng Ký Học Phần</h1>
+    <div class="card">
+      <div>Môn học: Lập trình Backend (UTH)</div>
+      <div id="si-so" class="status">0 / 5</div>
+      <div id="message">Nhấn nút để bắt đầu demo</div>
+
+      <button class="btn-bad" onclick="register('/register-bad')">
+        Đăng ký (No T-SQL - Lỗi)
+      </button>
+      <button class="btn-good" onclick="register('/register-good')">
+        Đăng ký (Với T-SQL - Chuẩn)
+      </button>
+      <br />
+      <button class="btn-reset" onclick="resetData()">
+        Reset dữ liệu về 4/5
+      </button>
+    </div>
+
+    <script>
+      const API = "http://localhost:5000";
+
+      async function updateStatus() {
+        try {
+          const res = await axios.get(`${API}/status`);
+          const { SiSoHienTai, SiSoToiDa } = res.data;
+          const el = document.getElementById("si-so");
+          el.innerText = `${SiSoHienTai} / ${SiSoToiDa}`;
+          el.className = SiSoHienTai > SiSoToiDa ? "status error" : "status";
+        } catch (err) {
+          console.error("Lỗi cập nhật:", err);
+        }
+      }
+
+      async function register(path) {
+        document.getElementById("message").innerText = "Đang gửi yêu cầu...";
+        try {
+          const res = await axios.post(`${API}${path}`);
+          document.getElementById("message").innerText = res.data;
+        } catch (err) {
+          document.getElementById("message").innerText = err.response
+            ? err.response.data
+            : "Lỗi kết nối";
+        }
+        updateStatus();
+      }
+
+      async function resetData() {
+        await axios.post(`${API}/reset`);
+        document.getElementById("message").innerText = "Đã reset dữ liệu";
+        updateStatus();
+      }
+
+      setInterval(updateStatus, 1000); // Tự động cập nhật mỗi giây
+      updateStatus();
+    </script>
+  </body>
+</html>
