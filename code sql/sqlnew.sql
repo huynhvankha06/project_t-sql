@@ -1,33 +1,41 @@
+﻿-- 1. Tạo lại Database từ đầu
+USE master;
+GO
+IF EXISTS (SELECT * FROM sys.databases WHERE name = 'University')
+BEGIN
+    ALTER DATABASE University SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE University;
+END
+GO
+CREATE DATABASE University;
+GO
 USE University;
 GO
 
--- 1. Dọn dẹp cấu trúc cũ để tránh xung đột
-IF OBJECT_ID('NhatKyHeThong', 'U') IS NOT NULL DROP TABLE NhatKyHeThong;
-IF OBJECT_ID('ChiTietDangKy', 'U') IS NOT NULL DROP TABLE ChiTietDangKy;
-IF OBJECT_ID('SinhVien', 'U') IS NOT NULL DROP TABLE SinhVien;
-IF OBJECT_ID('LopHoc', 'U') IS NOT NULL DROP TABLE LopHoc;
-GO
-
--- 2. Tạo bảng hệ thống
+-- 2. Tạo bảng Lớp Học (Chứa 10 môn IT)
 CREATE TABLE LopHoc (
     MaLop INT PRIMARY KEY,
     TenMonHoc NVARCHAR(100),
-    SiToiDa INT,
+    SiSoToiDa INT,
     SiSoHienTai INT DEFAULT 0
 );
 
+-- 3. Tạo bảng Sinh Viên (Demo Function/Variable)
 CREATE TABLE SinhVien (
     MaSV INT PRIMARY KEY,
     TenSV NVARCHAR(50),
     TrangThai NVARCHAR(20) -- 'BinhThuong' hoặc 'NoHocPhi'
 );
 
+-- 4. Tạo bảng Chi Tiết Đăng Ký
 CREATE TABLE ChiTietDangKy (
-    MaSV INT, MaLop INT,
+    MaSV INT,
+    MaLop INT,
     NgayDangKy DATETIME DEFAULT GETDATE(),
     PRIMARY KEY (MaSV, MaLop)
 );
 
+-- 5. Tạo bảng Nhật Ký Hệ Thống (Demo Trigger)
 CREATE TABLE NhatKyHeThong (
     LogID INT IDENTITY(1,1) PRIMARY KEY,
     NoiDung NVARCHAR(MAX),
@@ -35,8 +43,8 @@ CREATE TABLE NhatKyHeThong (
 );
 GO
 
--- 3. CHÈN DỮ LIỆU MẪU CHO TẤT CẢ 10 MÔN HỌC (Fix lỗi undefined)
-INSERT INTO LopHoc (MaLop, TenMonHoc, SiToiDa, SiSoHienTai) VALUES 
+-- 6. Chèn dữ liệu mẫu cho 10 môn IT
+INSERT INTO LopHoc (MaLop, TenMonHoc, SiSoToiDa, SiSoHienTai) VALUES 
 (101, N'Lập trình Hướng đối tượng (OOP)', 50, 0),
 (102, N'Cấu trúc dữ liệu & Giải thuật', 50, 0),
 (103, N'Cơ sở dữ liệu (Database)', 50, 0),
@@ -48,11 +56,10 @@ INSERT INTO LopHoc (MaLop, TenMonHoc, SiToiDa, SiSoHienTai) VALUES
 (109, N'An toàn thông tin', 50, 0),
 (110, N'Phân tích thiết kế hệ thống', 50, 0);
 
--- Chèn sinh viên mẫu
-INSERT INTO SinhVien VALUES (1, N'Văn Kha', 'BinhThuong'), (2, N'Học viên nợ phí', 'NoHocPhi');
+INSERT INTO SinhVien VALUES (1, N'Huỳnh Văn Kha', 'BinhThuong'), (2, N'Học viên nợ phí', 'NoHocPhi');
 GO
 
--- 4. [T-SQL] FUNCTION: Kiểm tra điều kiện học phí
+-- 7. T-SQL FUNCTION: Kiểm tra học phí
 CREATE OR ALTER FUNCTION fn_CheckHocPhi (@MaSV INT)
 RETURNS NVARCHAR(20)
 AS
@@ -63,49 +70,45 @@ BEGIN
 END;
 GO
 
--- 5. [T-SQL] TRIGGER: Tự động ghi nhật ký hệ thống
--- Tác dụng: Chứng minh tính tự động hóa ngầm của Database
+-- 8. T-SQL TRIGGER: Tự động ghi nhật ký (Camera giám sát)
 CREATE OR ALTER TRIGGER trg_AfterRegistration
 ON ChiTietDangKy AFTER INSERT AS
 BEGIN
     INSERT INTO NhatKyHeThong (NoiDung)
-    SELECT CONCAT(N'HỆ THỐNG: SV ', MaSV, N' ghi danh thành công môn học ', MaLop)
+    SELECT CONCAT(N'HỆ THỐNG: SV ', MaSV, N' đã ghi danh môn ', MaLop, N' thành công qua T-SQL.')
     FROM inserted;
 END;
 GO
 
--- 6. [T-SQL] STORED PROCEDURE: Bộ não xử lý nghiệp vụ
--- Tác dụng: Dùng Variable, Logic IF/ELSE và đặc biệt là TRANSACTION + LOCK
+-- 9. T-SQL PROCEDURE: Xử lý đăng ký (Transaction + Lock + Variable)
 CREATE OR ALTER PROCEDURE sp_XuLyDangKyHocPhan
     @MaSV INT, @MaLop INT
 AS
 BEGIN
     SET NOCOUNT ON;
-    DECLARE @CurrentStatus NVARCHAR(20);
+    DECLARE @TinhTrang NVARCHAR(20);
     
-    -- Dùng biến để lấy trạng thái từ hàm
-    SET @CurrentStatus = dbo.fn_CheckHocPhi(@MaSV);
+    -- Dùng Variable và Function để check điều kiện
+    SET @TinhTrang = dbo.fn_CheckHocPhi(@MaSV);
 
-    -- IF/ELSE điều khiển luồng
-    IF (@CurrentStatus = 'NoHocPhi')
+    IF (@TinhTrang = 'NoHocPhi')
     BEGIN
-        SELECT 'LOCKED' AS Status, N'Lỗi: SV nợ phí, vui lòng đóng học phí để tiếp tục' AS Msg;
+        SELECT 'LOCKED' AS Status, N'Lỗi: Sinh viên chưa hoàn thành học phí!' AS Msg;
         RETURN;
     END
 
     BEGIN TRANSACTION;
     BEGIN TRY
-        -- Khóa dòng (UPDLOCK) để giải quyết tranh chấp (Race Condition)
+        -- Khóa dòng dữ liệu (UPDLOCK) để chống Race Condition
         IF (SELECT SiSoHienTai FROM LopHoc WITH (UPDLOCK) WHERE MaLop = @MaLop) < 
-           (SELECT SiToiDa FROM LopHoc WHERE MaLop = @MaLop)
+           (SELECT SiSoToiDa FROM LopHoc WHERE MaLop = @MaLop)
         BEGIN
-            WAITFOR DELAY '00:00:02'; -- Giả lập hệ thống xử lý nặng để demo
-            
+            WAITFOR DELAY '00:00:02'; -- Giả lập xử lý để demo tranh chấp
             UPDATE LopHoc SET SiSoHienTai = SiSoHienTai + 1 WHERE MaLop = @MaLop;
             INSERT INTO ChiTietDangKy (MaSV, MaLop) VALUES (@MaSV, @MaLop);
 
             COMMIT TRANSACTION;
-            SELECT 'SUCCESS' AS Status, N'Đăng ký môn học thành công!' AS Msg;
+            SELECT 'SUCCESS' AS Status, N'Đăng ký thành công!' AS Msg;
         END
         ELSE
         BEGIN

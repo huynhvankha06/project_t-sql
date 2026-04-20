@@ -1,4 +1,4 @@
-USE University;
+﻿USE University;
 GO
 
 -- 1. Dọn dẹp cấu trúc cũ để tránh xung đột
@@ -89,7 +89,7 @@ BEGIN
     -- IF/ELSE điều khiển luồng
     IF (@CurrentStatus = 'NoHocPhi')
     BEGIN
-        SELECT 'LOCKED' AS Status, N'Lỗi: SV nợ phí, vui lòng đóng học phí để tiếp tục' AS Msg;
+        SELECT 'LOCKED' AS Status, N'Lỗi: SV nợ phí, T-SQL chặn đăng ký!' AS Msg;
         RETURN;
     END
 

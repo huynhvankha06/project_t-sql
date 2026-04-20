@@ -2,121 +2,609 @@
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
-    <title>Demo T-SQL vs No T-SQL</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hệ Thống Đăng Ký Học Phần - Ultimate Edition</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap"
+      rel="stylesheet"
+    />
+
     <style>
+      :root {
+        --bg-dark: #0f0c29;
+        --bg-mid: #302b63;
+        --bg-light: #24243e;
+        --neon-purple: #a855f7;
+        --neon-purple-glow: rgba(168, 85, 247, 0.6);
+        --neon-pink: #ec4899;
+        --danger: #ef4444;
+        --danger-glow: rgba(239, 68, 68, 0.4);
+        --success: #10b981;
+        --success-glow: rgba(16, 185, 129, 0.4);
+        --warning: #f59e0b; /* Thêm màu vàng cảnh báo nợ phí */
+        --text-main: #ffffff;
+        --text-muted: #9ca3af;
+        --card-bg: rgba(255, 255, 255, 0.05);
+        --border: rgba(255, 255, 255, 0.1);
+      }
+
+      * {
+        box-sizing: border-box;
+        font-family: "Inter", sans-serif;
+        margin: 0;
+        padding: 0;
+      }
       body {
-        font-family: sans-serif;
-        background: #1a202c;
-        color: white;
+        background: linear-gradient(
+          135deg,
+          var(--bg-dark),
+          var(--bg-mid),
+          var(--bg-light)
+        );
+        background-attachment: fixed;
+        color: var(--text-main);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      .header {
+        padding: 25px 40px;
         text-align: center;
-        padding: 50px;
+        border-bottom: 1px solid var(--border);
+        background: rgba(0, 0, 0, 0.3);
+        backdrop-filter: blur(10px);
+      }
+      .header h1 {
+        font-size: 26px;
+        background: linear-gradient(to right, #fff, var(--neon-purple));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        letter-spacing: 1px;
+      }
+      .main-container {
+        display: flex;
+        flex: 1;
+        padding: 40px;
+        gap: 30px;
+        max-width: 1300px;
+        margin: 0 auto;
+        width: 100%;
       }
       .card {
-        background: #2d3748;
-        padding: 30px;
-        border-radius: 15px;
-        display: inline-block;
-        min-width: 300px;
-        box-shadow: 0 10px 15px rgba(0, 0, 0, 0.3);
+        background: var(--card-bg);
+        backdrop-filter: blur(20px);
+        border-radius: 24px;
+        padding: 35px;
+        border: 1px solid var(--border);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
       }
-      .status {
-        font-size: 3rem;
+      .left-panel {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+      }
+      .input-group label {
+        font-weight: 600;
+        font-size: 13px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 10px;
+        display: block;
+      }
+      .custom-select {
+        position: relative;
+      }
+      .custom-select i {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--neon-purple);
+        font-size: 18px;
+        pointer-events: none;
+      }
+      select {
+        width: 100%;
+        padding: 15px 15px 15px 45px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        font-size: 15px;
+        background: rgba(0, 0, 0, 0.4);
+        color: white;
+        appearance: none;
+        cursor: pointer;
+      }
+      input {
+        width: 100%;
+        padding: 15px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        font-size: 18px;
+        background: rgba(0, 0, 0, 0.4);
+        color: white;
+        text-align: center;
         font-weight: bold;
-        margin: 20px 0;
-        color: #4fd1c5;
       }
-      .status.error {
-        color: #f56565;
+      select:focus,
+      input:focus {
+        border-color: var(--neon-purple);
+        outline: none;
+        box-shadow: 0 0 15px var(--neon-purple-glow);
+      }
+      select option {
+        background: var(--bg-dark);
+        color: white;
+        padding: 10px;
+      }
+
+      /* Thêm class đổi màu icon theo sinh viên */
+      .icon-success {
+        color: var(--success) !important;
+      }
+      .icon-warning {
+        color: var(--warning) !important;
+      }
+
+      .mid-panel {
+        flex: 1.2;
+        display: flex;
+        flex-direction: column;
+      }
+      .chart-container {
+        position: relative;
+        height: 300px;
+        width: 100%;
+        margin-top: auto;
+        margin-bottom: auto;
+      }
+      .right-panel {
+        flex: 1.2;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        text-align: center;
+      }
+      .placeholder-state {
+        color: var(--text-muted);
+      }
+      .placeholder-state i {
+        font-size: 60px;
+        opacity: 0.2;
+        margin-bottom: 20px;
+      }
+      .dashboard-active {
+        display: none;
+      }
+      .course-title {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 20px;
+        color: var(--neon-purple);
+      }
+      .stats-number {
+        font-size: 5.5rem;
+        font-weight: 800;
+        font-family: monospace;
+        letter-spacing: -2px;
+      }
+      .stats-divider {
+        color: var(--border);
+        margin: 0 10px;
+        font-weight: 300;
+        font-size: 4rem;
+      }
+      .bottom-actions {
+        background: rgba(0, 0, 0, 0.4);
+        padding: 25px 40px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        justify-content: center;
+        gap: 20px;
       }
       button {
-        padding: 15px 25px;
-        margin: 10px;
-        border: none;
-        border-radius: 8px;
+        padding: 15px 30px;
+        border: 1px solid transparent;
+        border-radius: 30px;
+        font-size: 15px;
+        font-weight: 700;
         cursor: pointer;
-        font-weight: bold;
         transition: 0.3s;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        min-width: 250px;
+      }
+      button:active {
+        transform: scale(0.95);
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+      .btn-setup {
+        background: linear-gradient(
+          90deg,
+          var(--neon-purple),
+          var(--neon-pink)
+        );
+        color: white;
+        box-shadow: 0 0 20px var(--neon-purple-glow);
       }
       .btn-bad {
-        background: #e53e3e;
-        color: white;
+        background: transparent;
+        color: var(--danger);
+        border-color: var(--danger);
+        box-shadow: 0 0 15px var(--danger-glow) inset;
       }
       .btn-good {
-        background: #38a169;
+        background: transparent;
+        color: var(--success);
+        border-color: var(--success);
+        box-shadow: 0 0 15px var(--success-glow) inset;
+      }
+      #toast {
+        position: fixed;
+        top: 30px;
+        right: 30px;
+        padding: 16px 25px;
+        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.8);
+        border: 1px solid var(--border);
         color: white;
+        font-weight: 600;
+        display: none;
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        gap: 10px;
       }
-      .btn-reset {
-        background: #4a5568;
-        color: white;
-        margin-top: 20px;
+      .fa-spin {
+        animation: fa-spin 1s infinite linear;
       }
-      button:hover {
-        opacity: 0.8;
-        transform: scale(1.05);
-      }
-      #message {
-        margin-top: 20px;
-        font-style: italic;
-        color: #cbd5e0;
+      @keyframes fa-spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
       }
     </style>
   </head>
   <body>
-    <h1>Hệ Thống Đăng Ký Học Phần</h1>
-    <div class="card">
-      <div>Môn học: Lập trình Backend (UTH)</div>
-      <div id="si-so" class="status">0 / 5</div>
-      <div id="message">Nhấn nút để bắt đầu demo</div>
+    <div class="header">
+      <h1><i class="fa-solid fa-server"></i> Console Quản Trị Học Phần</h1>
+    </div>
 
-      <button class="btn-bad" onclick="register('/register-bad')">
-        Đăng ký (No T-SQL - Lỗi)
+    <div class="main-container">
+      <div class="card left-panel">
+        <h2 style="font-size: 18px; color: white">
+          <i class="fa-solid fa-sliders"></i> Cấu Hình Môi Trường
+        </h2>
+        <hr style="border-color: var(--border); margin: 10px 0 20px 0" />
+
+        <div class="input-group">
+          <label>Sinh Viên Đăng Ký</label>
+          <div class="custom-select">
+            <i
+              class="fa-solid fa-user-graduate icon-success"
+              id="studentIcon"
+            ></i>
+            <select id="studentSelect" onchange="updateStudentIcon()">
+              <option value="1" data-status="success">
+                👨‍🎓 SV001 - Đã nộp học phí (Hợp lệ)
+              </option>
+              <option value="2" data-status="warning">
+                🙅‍♂️ SV002 - Nợ học phí (Khóa ĐK)
+              </option>
+            </select>
+          </div>
+        </div>
+        <div class="input-group">
+          <label>Chọn Môn Học</label>
+          <div class="custom-select">
+            <i class="fa-solid fa-code" id="courseIcon"></i>
+            <select id="courseSelect" onchange="updateCourseIcon()">
+              <option value="101" data-icon="fa-cubes">
+                Lập trình Hướng đối tượng (OOP)
+              </option>
+              <option value="102" data-icon="fa-network-wired">
+                Cấu trúc dữ liệu & Giải thuật
+              </option>
+              <option value="103" data-icon="fa-database">
+                Cơ sở dữ liệu (Database)
+              </option>
+              <option value="104" data-icon="fa-wifi">Mạng máy tính</option>
+              <option value="105" data-icon="fa-microchip">Hệ điều hành</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label>Sỉ Số Tối Đa (Slot)</label>
+          <input type="number" id="maxInput" value="50" min="1" />
+        </div>
+      </div>
+
+      <div class="card mid-panel">
+        <h2
+          style="
+            font-size: 18px;
+            color: white;
+            text-align: center;
+            margin-bottom: 20px;
+          "
+        >
+          <i class="fa-solid fa-chart-simple"></i> Biểu Đồ Đăng Ký
+        </h2>
+        <div class="chart-container">
+          <canvas id="registrationChart"></canvas>
+        </div>
+      </div>
+
+      <div class="card right-panel">
+        <div id="placeholder" class="placeholder-state">
+          <i class="fa-solid fa-hourglass-empty"></i>
+          <h3 style="color: white">Đang chờ lệnh...</h3>
+        </div>
+
+        <div id="dashboard" class="dashboard-active">
+          <div class="course-title" id="displayCourseName">Tên môn học</div>
+          <div>
+            <span
+              id="currentVal"
+              class="stats-number"
+              style="color: var(--neon-purple)"
+              >0</span
+            >
+            <span class="stats-divider">/</span>
+            <span id="maxVal" class="stats-number" style="color: white">0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom-actions">
+      <button id="btnSetup" class="btn-setup" onclick="setupDemo()">
+        <i class="fa-solid fa-power-off"></i> Thiết lập (Max-1)
       </button>
-      <button class="btn-good" onclick="register('/register-good')">
-        Đăng ký (Với T-SQL - Chuẩn)
+      <button
+        id="btnBad"
+        class="btn-bad"
+        onclick="register('/register-bad', 'btnBad')"
+      >
+        <i class="fa-solid fa-triangle-exclamation"></i> Thực thi (NO T-SQL)
       </button>
-      <br />
-      <button class="btn-reset" onclick="resetData()">
-        Reset dữ liệu về 4/5
+      <button
+        id="btnGood"
+        class="btn-good"
+        onclick="register('/register-good', 'btnGood')"
+      >
+        <i class="fa-solid fa-shield-check"></i> Thực thi (WITH T-SQL)
       </button>
+    </div>
+
+    <div id="toast" style="display: none">
+      <i id="toastIcon" class="fa-solid fa-circle-info"></i>
+      <span id="toastMsg">Thông báo</span>
     </div>
 
     <script>
       const API = "http://localhost:5000";
+      let isDashboardActive = false;
+      let pollingInterval = null;
+      let myChart = null;
 
-      async function updateStatus() {
-        try {
-          const res = await axios.get(`${API}/status`);
-          const { SiSoHienTai, SiSoToiDa } = res.data;
-          const el = document.getElementById("si-so");
-          el.innerText = `${SiSoHienTai} / ${SiSoToiDa}`;
-          el.className = SiSoHienTai > SiSoToiDa ? "status error" : "status";
-        } catch (err) {
-          console.error("Lỗi cập nhật:", err);
+      function initChart() {
+        const ctx = document
+          .getElementById("registrationChart")
+          .getContext("2d");
+        myChart = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: ["Đã Đăng Ký", "Còn Trống"],
+            datasets: [
+              {
+                label: "Số lượng Sinh viên",
+                data: [0, 50],
+                backgroundColor: [
+                  "rgba(168, 85, 247, 0.8)",
+                  "rgba(255, 255, 255, 0.1)",
+                ],
+                borderColor: ["#a855f7", "rgba(255, 255, 255, 0.2)"],
+                borderWidth: 1,
+                borderRadius: 5,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: { color: "rgba(255,255,255,0.1)" },
+                ticks: { color: "#9ca3af", stepSize: 10 },
+              },
+              x: {
+                grid: { display: false },
+                ticks: { color: "white", font: { weight: "bold" } },
+              },
+            },
+          },
+        });
+      }
+
+      function updateCourseIcon() {
+        const select = document.getElementById("courseSelect");
+        const selectedOption = select.options[select.selectedIndex];
+        document.getElementById("courseIcon").className =
+          `fa-solid ${selectedOption.getAttribute("data-icon")}`;
+      }
+
+      // Đổi màu icon sinh viên tùy theo nợ phí hay không
+      function updateStudentIcon() {
+        const select = document.getElementById("studentSelect");
+        const status =
+          select.options[select.selectedIndex].getAttribute("data-status");
+        const icon = document.getElementById("studentIcon");
+        icon.className = `fa-solid fa-user-graduate icon-${status}`;
+      }
+
+      function showToast(msg, type = "info") {
+        const toast = document.getElementById("toast");
+        const icon = document.getElementById("toastIcon");
+        document.getElementById("toastMsg").innerText = msg;
+        toast.style.borderColor =
+          type === "error" ? "var(--danger)" : "var(--neon-purple)";
+        toast.style.boxShadow =
+          type === "error"
+            ? "0 0 15px var(--danger-glow)"
+            : "0 0 15px var(--neon-purple-glow)";
+        if (type === "error") icon.className = "fa-solid fa-circle-xmark";
+        else if (type === "success")
+          icon.className = "fa-solid fa-circle-check";
+        else icon.className = "fa-solid fa-circle-info";
+        toast.style.display = "flex";
+        setTimeout(() => (toast.style.display = "none"), 3500);
+      }
+
+      function setButtonLoading(btnId, isLoading, defaultText, defaultIcon) {
+        const btn = document.getElementById(btnId);
+        if (isLoading) {
+          btn.disabled = true;
+          btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Đang xử lý...`;
+        } else {
+          btn.disabled = false;
+          btn.innerHTML = `<i class="fa-solid ${defaultIcon}"></i> ${defaultText}`;
         }
       }
 
-      async function register(path) {
-        document.getElementById("message").innerText = "Đang gửi yêu cầu...";
+      async function updateUI() {
+        if (!isDashboardActive) return;
+        const selectEl = document.getElementById("courseSelect");
+        const course = selectEl.value;
+        document.getElementById("displayCourseName").innerText =
+          selectEl.options[selectEl.selectedIndex].text;
+
         try {
-          const res = await axios.post(`${API}${path}`);
-          document.getElementById("message").innerText = res.data;
+          const res = await axios.get(`${API}/status/${course}`);
+          if (!res.data) return;
+
+          const current = res.data.SiSoHienTai;
+          const max = res.data.SiSoToiDa;
+          const emptySlots = max - current > 0 ? max - current : 0;
+
+          document.getElementById("currentVal").innerText = current;
+          document.getElementById("maxVal").innerText = max;
+
+          const currentEl = document.getElementById("currentVal");
+          if (current > max) {
+            currentEl.style.color = "var(--danger)";
+            myChart.data.datasets[0].backgroundColor[0] =
+              "rgba(239, 68, 68, 0.8)";
+            myChart.data.datasets[0].borderColor[0] = "#ef4444";
+          } else if (current === max) {
+            currentEl.style.color = "var(--success)";
+            myChart.data.datasets[0].backgroundColor[0] =
+              "rgba(16, 185, 129, 0.8)";
+            myChart.data.datasets[0].borderColor[0] = "#10b981";
+          } else {
+            currentEl.style.color = "var(--neon-purple)";
+            myChart.data.datasets[0].backgroundColor[0] =
+              "rgba(168, 85, 247, 0.8)";
+            myChart.data.datasets[0].borderColor[0] = "#a855f7";
+          }
+
+          myChart.data.datasets[0].data = [current, emptySlots];
+          myChart.options.scales.y.max = max + max * 0.2;
+          myChart.update();
         } catch (err) {
-          document.getElementById("message").innerText = err.response
-            ? err.response.data
-            : "Lỗi kết nối";
+          console.error("Lỗi lấy dữ liệu");
         }
-        updateStatus();
       }
 
-      async function resetData() {
-        await axios.post(`${API}/reset`);
-        document.getElementById("message").innerText = "Đã reset dữ liệu";
-        updateStatus();
+      async function setupDemo() {
+        const course = document.getElementById("courseSelect").value;
+        const max = parseInt(document.getElementById("maxInput").value);
+        const current = max - 1;
+
+        setButtonLoading("btnSetup", true);
+        try {
+          await axios.post(`${API}/setup`, {
+            MaLop: course,
+            SiSoToiDa: max,
+            SiSoHienTai: current,
+          });
+          showToast(`Đã thiết lập sỉ số: ${current}/${max}`, "success");
+          document.getElementById("placeholder").style.display = "none";
+          document.getElementById("dashboard").style.display = "block";
+          isDashboardActive = true;
+          updateUI();
+          if (pollingInterval) clearInterval(pollingInterval);
+          pollingInterval = setInterval(updateUI, 1000);
+        } catch (err) {
+          showToast("Lỗi kết nối Backend Docker!", "error");
+        } finally {
+          setButtonLoading(
+            "btnSetup",
+            false,
+            "Thiết lập (Max-1)",
+            "fa-power-off",
+          );
+        }
       }
 
-      setInterval(updateStatus, 1000); // Tự động cập nhật mỗi giây
-      updateStatus();
+      async function register(path, btnId) {
+        if (!isDashboardActive) {
+          showToast("Vui lòng nhấn 'Thiết lập' trước!", "error");
+          return;
+        }
+
+        const course = document.getElementById("courseSelect").value;
+        const studentId = document.getElementById("studentSelect").value; // Lấy ID sinh viên
+
+        const defaultIcon =
+          btnId === "btnBad" ? "fa-triangle-exclamation" : "fa-shield-check";
+        const defaultText =
+          btnId === "btnBad" ? "Thực thi (NO T-SQL)" : "Thực thi (WITH T-SQL)";
+
+        setButtonLoading(btnId, true);
+
+        try {
+          // THAY ĐỔI DUY NHẤT Ở ĐÂY: Gửi thêm MaSV xuống Backend
+          const res = await axios.post(`${API}${path}`, {
+            MaLop: course,
+            MaSV: studentId,
+          });
+          showToast(res.data, "success");
+        } catch (err) {
+          // Bắt lỗi nợ học phí từ SQL Server trả về
+          showToast(err.response ? err.response.data : "Lỗi kết nối", "error");
+        } finally {
+          setButtonLoading(btnId, false, defaultText, defaultIcon);
+          updateUI();
+        }
+      }
+
+      window.onload = () => {
+        initChart();
+        updateCourseIcon();
+        updateStudentIcon();
+      };
     </script>
   </body>
 </html>
